@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="plugin.audio.radiothek" name="ORF Radiothek" version="0.0.1" provider-name="sofaking">
+    <requires>
+        <import addon="xbmc.python" version="2.20.0" />
+        <import addon="script.module.requests" version="2.9.1"/>
+    </requires>
+    <extension point="xbmc.python.pluginsource" library="default.py">
+        <provides>audio</provides>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <summary lang="en">This is a Kodi Addon to provide acces to the ORF Radiothek (Austrian public service broadcaster)</summary>
+        <license>GNU General Public License, v2</license>
+        <platform>all</platform>
+        <email>sofaking@gettingmoney.at</email>
+        <website>https://radiothek.orf.at</website>
+        <source>https://github.com/s0faking/plugin.video.radiothek</source>
+    </extension>
+</addon>
