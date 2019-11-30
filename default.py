@@ -3,6 +3,7 @@
 
 from resources.lib.RadioThek import *
 import os
+import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
@@ -44,9 +45,9 @@ def add_directory_item(directory, mode, pluginhandle):
         logo_path = os.path.join(channel_icon_base, directory.logo)
         if not directory.thumbnail:
             directory.thumbnail = logo_path
-        liz.setArt({'thumb': logo_path, 'icon': logo_path, 'poster': directory.thumbnail, 'banner': directory.thumbnail})
+        liz.setArt({'thumb': logo_path, 'icon': logo_path, 'poster': directory.thumbnail, 'banner': directory.thumbnail, 'fanart': directory.backdrop})
     else:
-        liz.setArt({'thumb': directory.thumbnail, 'icon': directory.thumbnail, 'poster': directory.thumbnail, 'banner': directory.thumbnail})
+        liz.setArt({'thumb': directory.thumbnail, 'icon': directory.thumbnail, 'poster': directory.thumbnail, 'banner': directory.thumbnail, 'fanart': directory.backdrop})
     liz.setProperty('IsPlayable', 'false')
     xbmcplugin.addDirectoryItem(pluginhandle, url=u, listitem=liz, isFolder=True)
 
@@ -67,11 +68,10 @@ def add_directory(title, banner, backdrop, logo, description, link, mode, plugin
     if logo:
         channel_icon_base = get_media_path()
         logo_path = os.path.join(channel_icon_base, logo)
-        liz.setArt({'thumb': logo_path, 'icon': logo_path, 'poster': banner, 'banner': banner, 'clearlogo': banner, 'clearart': banner})
+        liz.setArt({'thumb': logo_path, 'icon': logo_path, 'poster': banner, 'banner': banner, 'clearlogo': banner, 'clearart': banner, 'fanart': backdrop, 'landscape': backdrop})
     else:
-        liz.setArt({'thumb': banner, 'icon': banner, 'poster': banner, 'banner': banner, 'clearlogo': banner, 'clearart': banner})
+        liz.setArt({'thumb': banner, 'icon': banner, 'poster': banner, 'banner': banner, 'clearlogo': banner, 'clearart': banner, 'fanart': backdrop, 'landscape': backdrop})
     liz.setProperty('IsPlayable', 'false')
-    #xbmcplugin.setContent(pluginhandle, "songs")
     xbmcplugin.addDirectoryItem(pluginhandle, url=u, listitem=liz, isFolder=True)
 
 
@@ -92,7 +92,6 @@ def add_episode(episode, pluginhandle):
         liz.setProperty('mimetype', 'audio/mpeg')
         if episode.duration:
             liz.setInfo('video', {'duration': episode.duration/1000})
-
 
         info_labels = {
             "Title": generated_title,
@@ -144,17 +143,89 @@ def add_stream(episode, pluginhandle):
     xbmcplugin.addDirectoryItem(pluginhandle, url=u, listitem=liz, isFolder=False)
 
 
-def get_navigation():
+def get_navigation(pluginhandle):
     add_directory("Highlights", "", "", "", "", "", "highlights", pluginhandle)
     add_directory("Broadcasts", "", "", "", "", "", "broadcast", pluginhandle)
     add_directory("Podcasts", "", "", "", "", "", "podcasts", pluginhandle)
     add_directory("Topics", "", "", "", "", "", "tags", pluginhandle)
     add_directory("Archive", "", "", "", "", "", "archive", pluginhandle)
     add_directory("Live", "", "", "", "", "", "live", pluginhandle)
+    add_directory("Search", "", "", "", "", "", "search", pluginhandle)
     xbmcplugin.endOfDirectory(pluginhandle)
 
 
-def main():
+def get_input():
+    kb = xbmc.Keyboard()
+    kb.setDefault('')
+    kb.setHeading('Enter a search phrase ...')
+    kb.setHiddenInput(False)
+    kb.doModal()
+    if kb.isConfirmed():
+        search_term = kb.getText()
+        searchHistoryPush(search_term)
+        return search_term
+    else:
+        return
+
+
+def searchHistoryPush(title):
+    if not title:
+        return
+    addonUserDataFolder = xbmc.translatePath("special://profile/addon_data/plugin.audio.radiothek")
+    json_file = os.path.join(addonUserDataFolder, 'searchhistory.json')
+    title = unquote_url(title)
+    title = title.replace("+", " ").strip()
+    # check if file exists
+    if os.path.exists(json_file):
+        # check if file already has an entry
+        if os.path.getsize(json_file) > 0:
+            # append value to JSON File
+            data = getJsonFile(json_file)
+            data.append(title)
+            saveJsonFile(data, json_file)
+        # found empty file - writing first record
+        else:
+            data = [title]
+            saveJsonFile(data, json_file)
+    # create json file
+    else:
+        if not os.path.exists(addonUserDataFolder):
+            os.makedirs(addonUserDataFolder)
+        data = [title]
+        saveJsonFile(data, json_file)
+
+
+def searchHistoryGet():
+    addonUserDataFolder = xbmc.translatePath("special://profile/addon_data/plugin.audio.radiothek")
+    json_file = os.path.join(addonUserDataFolder, 'searchhistory.json')
+    if os.path.exists(json_file):
+        if os.path.getsize(json_file) > 0:
+            data = getJsonFile(json_file)
+            return data
+    return []
+
+
+def saveJsonFile(data, file):
+    with open(file, 'w') as data_file:
+        data_file.write(json.dumps(data))
+    data_file.close()
+
+
+def getJsonFile(file):
+    with open(file, 'r') as data_file:
+        data = json.load(data_file)
+    return data
+
+
+def getSearchHistory(pluginhandle):
+    history = searchHistoryGet()
+    print(history)
+    for search_query in reversed(history):
+        if search_query.strip() != '':
+            add_directory(search_query, "", "", "", "", search_query, "search_detail", pluginhandle)
+
+
+def main(pluginhandle):
     params = parameters_string_to_dict(sys.argv[2])
     mode = params.get('mode')
     link = unquote_url(params.get('link'))
@@ -162,7 +233,7 @@ def main():
     print("LINK %s" % link)
 
     if mode is None:
-        get_navigation()
+        get_navigation(pluginhandle)
     elif mode == 'broadcast':
         list_items = api.get_broadcast()
         for list_item in list_items:
@@ -193,6 +264,21 @@ def main():
         for episode in episodes:
             add_stream(episode, pluginhandle)
         xbmcplugin.endOfDirectory(pluginhandle)
+    elif mode == 'search':
+        add_directory("Search ...", "", "", "", "", "", "search_detail", pluginhandle)
+        getSearchHistory(pluginhandle)
+        xbmcplugin.endOfDirectory(handle)
+    elif mode == 'search_detail':
+        if not link:
+            query = get_input()
+        else:
+            query = link
+        print("Searching for %s" % query)
+        if query:
+            list_items = api.get_search(query)
+            for list_item in list_items:
+                add_directory_item(list_item, "broadcast_detail", pluginhandle)
+            xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'podcast_detail':
         episodes = api.get_podcast_details(link)
         for episode in episodes:
@@ -217,7 +303,7 @@ def main():
 
 
 if __name__ == '__main__':
-    pluginhandle = int(sys.argv[1])
+    handle = int(sys.argv[1])
     resource_path = get_media_path()
     api = RadioThek(resource_path)
-    main()
+    main(handle)

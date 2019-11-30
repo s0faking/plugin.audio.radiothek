@@ -21,6 +21,7 @@ class RadioThek:
     api_ref = "https://radiothek.orf.at/js/app.769b3884.js"
     api_base = "https://audioapi.orf.at"
     tag_url = "/radiothek/api/tags/%s"
+    search_url = "/radiothek/api/search"
     staple_url = "/radiothek/stapled.json?_o=radiothek.orf.at"
     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36'
     api_reference = False
@@ -468,6 +469,32 @@ class RadioThek:
                     episode = Episode(station, title, description, [link], 'Livestream', thumbnail, backdrop, station, logo)
                     list_items.append(episode)
         return list_items
+
+    def get_search(self, query):
+        list_items = []
+        parameters = {
+            'q': query,
+            'offset': 0,
+            'limit': 20,
+            '_o': 'radiothek.orf.at'
+        }
+        get_parameters = url_encoder(parameters)
+        url = "%s?%s" % (self.search_url, get_parameters)
+        search_json = self.request_url(url, False)
+        if search_json['length'] > 0 and search_json['total'] > 0:
+            for search_item_container in search_json['hits']:
+                search_item = search_item_container['data']
+                station = self.get_station_name(search_item)
+                directory_title = self.format_title(search_item)
+                directory_description = self.format_description(search_item)
+                thumbnail = self.get_directory_image(search_item, 'thumbnail')
+                backdrop = self.get_directory_image(search_item, 'backdrop')
+                logo = self.get_directory_image(search_item, 'logo')
+                link = self.get_link(search_item)
+                search_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station, logo)
+                list_items.append(search_directory)
+        return list_items
+
 
     def get_api_reference(self):
         if not self.api_reference:
