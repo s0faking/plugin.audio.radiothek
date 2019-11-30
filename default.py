@@ -76,30 +76,40 @@ def add_directory(title, banner, backdrop, logo, description, link, mode, plugin
 
 
 def add_episode(episode, pluginhandle):
-    if episode.item_type == 'Broadcast' or episode.item_type == 'BroadcastItem':
-        generated_title = "%s | %s" % (episode.time, episode.title)
-    else:
-        generated_title = episode.title
+    if not episode.hidden:
+        if episode.artist:
+            generated_title = "[%s] %s - %s" % (episode.time, episode.artist, episode.trackname)
+        elif episode.time:
+            generated_title = "[%s] %s" % (episode.time, episode.title)
+        else:
+            generated_title = episode.title
+        parameters = {"link": episode.files[0], "mode": "play", "label": generated_title.encode('utf-8')}
+        u = sys.argv[0] + '?' + url_encoder(parameters)
+        liz = xbmcgui.ListItem(label=generated_title.encode('utf-8'))
+        liz.setInfo(type="Music", infoLabels={"mediatype": 'music'})
 
-    parameters = {"link": episode.files[0], "mode": "play", "label": generated_title.encode('utf-8')}
-    u = sys.argv[0] + '?' + url_encoder(parameters)
-    liz = xbmcgui.ListItem(label=generated_title.encode('utf-8'))
-    liz.setProperty('Music', 'true')
-    liz.setProperty('mimetype', 'audio/mpeg')
+        liz.setProperty('Music', 'true')
+        liz.setProperty('mimetype', 'audio/mpeg')
+        if episode.duration:
+            liz.setInfo('video', {'duration': episode.duration/1000})
 
-    info_labels = {
-        "Title": generated_title,
-        "Plot": episode.description,
-    }
-    if episode.item_type == 'BroadcastItem' and episode.artist:
-        info_labels['Plot'] = "[B]Artist:[/B] [COLOR blue]%s[/COLOR] \n[B]Track:[/B] [COLOR blue]%s[/COLOR]\n\n[LIGHT]%s[/LIGHT]" % (episode.artist, episode.trackname, info_labels['Plot'])
 
-    liz.setInfo(type="Video", infoLabels=info_labels)
-    liz.setArt({'thumb': episode.thumbnail, 'icon': episode.thumbnail})
-    liz.setProperty('IsPlayable', 'true')
-    xbmcplugin.addSortMethod(handle=pluginhandle, sortMethod=xbmcplugin.SORT_METHOD_LABEL_IGNORE_FOLDERS )
-    xbmcplugin.setContent(pluginhandle, "video")
-    xbmcplugin.addDirectoryItem(pluginhandle, url=u, listitem=liz, isFolder=False)
+        info_labels = {
+            "Title": generated_title,
+            "Plot": episode.description,
+        }
+        if episode.item_type == 'BroadcastItem' and episode.artist:
+            info_labels['Plot'] = "[B]Artist:[/B] [COLOR blue]%s[/COLOR] \n[B]Track:[/B] [COLOR blue]%s[/COLOR]\n\n[LIGHT]%s[/LIGHT]" % (episode.artist, episode.trackname, info_labels['Plot'])
+
+        liz.setInfo(type="Video", infoLabels=info_labels)
+        if episode.thumbnail:
+            liz.setArt({'thumb': episode.thumbnail, 'icon': episode.thumbnail})
+        else:
+            liz.setArt({'thumb': episode.logo, 'icon': episode.logo})
+        liz.setProperty('IsPlayable', 'true')
+        xbmcplugin.addSortMethod(handle=pluginhandle, sortMethod=xbmcplugin.SORT_METHOD_LABEL_IGNORE_FOLDERS )
+        xbmcplugin.setContent(pluginhandle, "music")
+        xbmcplugin.addDirectoryItem(pluginhandle, url=u, listitem=liz, isFolder=False)
 
 
 def add_stream(episode, pluginhandle):
@@ -168,11 +178,6 @@ def main():
         for list_item in list_items:
             add_directory_item(list_item, "broadcast_detail", pluginhandle)
         xbmcplugin.endOfDirectory(pluginhandle)
-    elif mode == 'live':
-        episodes = api.get_livestream()
-        for episode in episodes:
-            add_stream(episode, pluginhandle)
-        xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'tags':
         list_items = api.get_tags()
         for list_item in list_items:
@@ -183,35 +188,36 @@ def main():
         for list_item in list_items:
             add_directory_item(list_item, "podcast_detail", pluginhandle)
         xbmcplugin.endOfDirectory(pluginhandle)
+    elif mode == 'live':
+        episodes = api.get_livestream()
+        for episode in episodes:
+            add_stream(episode, pluginhandle)
+        xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'podcast_detail':
         episodes = api.get_podcast_details(link)
         for episode in episodes:
             add_episode(episode, pluginhandle)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'tags_detail':
-        list_items = api.get_tag_items(link)
+        list_items = api.get_tag_details(link)
         for list_item in list_items:
             add_directory_item(list_item, "broadcast_detail", pluginhandle)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'broadcast_detail':
-        print("----------    Broadcast Details Called width %s" % link)
-        api.get_api_reference()
-        broadcast = api.get_broadcast_details(link)
-        add_episode(broadcast, pluginhandle)
-        for broadcast_item in broadcast.items:
-            if not broadcast_item.hidden:
-                add_episode(broadcast_item, pluginhandle)
+        broadcasts = api.get_broadcast_details(link)
+        for broadcast in broadcasts:
+            add_episode(broadcast, pluginhandle)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'play':
         play_link = "%s|User-Agent=%s" % (link, api.user_agent)
         title = params.get('label')
         play_item = xbmcgui.ListItem(label=title, path=play_link)
         xbmcplugin.setResolvedUrl(pluginhandle, True, listitem=play_item)
-        xbmcplugin.setContent(pluginhandle, "album")
         xbmcplugin.endOfDirectory(pluginhandle)
 
 
 if __name__ == '__main__':
     pluginhandle = int(sys.argv[1])
-    api = RadioThek()
+    resource_path = get_media_path()
+    api = RadioThek(resource_path)
     main()

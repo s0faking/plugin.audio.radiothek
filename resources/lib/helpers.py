@@ -52,8 +52,10 @@ def get_js_json(js_data):
         return clean_json
 
 
-def clean_html(html):
+def clean_html(html, convert_line_breaks=False):
     if html:
+        if convert_line_breaks:
+            html = html.replace("<br/>", "\n").replace("</p>", "\n")
         reg = re.compile('<.*?>')
         return re.sub(reg, '', html)
     return ""
@@ -73,13 +75,12 @@ def get_time_format(timestamp, offset=False, timeOnly=False):
 def get_date_format(datestring):
     try:
         if datestring:
-            print(str(datestring))
             date = datetime.strptime(str(datestring), '%Y%m%d')
             if date:
                 return date.strftime("%d.%m.%Y")
         return ""
     except Exception as e:
-        print("Error with datestring %s" % datestring)
+        #print("Error with datestring %s" % datestring)
         str_dat = str(datestring)
         return "%s.%s.%s" % (str_dat[6:8], str_dat[4:6], str_dat[0:4])
 
@@ -100,4 +101,7 @@ def get_images(image_versions, thumbnail=False, strict=False):
     if images:
         images.reverse()
         return images
+
+    if thumbnail:
+        return ""
     return []

@@ -3,23 +3,8 @@
 
 
 class Episode:
-    channel_icons = {
-        'bgl': 'bgl.png',
-        'vbg': 'vbg.png',
-        'ooe': 'ooe.png',
-        'noe': 'noe.png',
-        'ktn': 'ktn.png',
-        'sbg': 'sbg.png',
-        'stm': 'stm.png',
-        'tir': 'tir.png',
-        'wie': 'wie.png',
-        'fm4': 'fm4.png',
-        'oe1': 'oe1.png',
-        'oe3': 'oe3.png'
-    }
-    logo = ""
-
-    def __init__(self, cms_id, title, description, files, item_type, thumbnail, backdrop, station):
+    def __init__(self, cms_id, title, description, files, item_type, thumbnail, backdrop, station, logo, hidden=0, meta=[]):
+        self.hidden = hidden
         self.id = cms_id
         self.title = title
         self.description = description
@@ -28,8 +13,24 @@ class Episode:
         self.item_type = item_type
         self.backdrop = backdrop
         self.station = station
-        if self.station in self.channel_icons:
-            self.logo = self.channel_icons[self.station]
+        self.logo = logo
+        self.full_title = ""
+        self.time = ""
+        self.duration = 0
+        self.trackname = ""
+        self.artist = ""
+        self.meta = meta
+        if self.meta and  len(self.meta):
+            if 'trackname' in self.meta:
+                self.trackname = self.meta['trackname']
+            if 'artist' in meta:
+                self.artist = self.meta['artist']
+            if 'duration' in self.meta:
+                self.duration = self.meta['duration']
+            if 'start' in self.meta:
+                self.time = self.meta['start']
+            if 'end' in self.meta:
+                self.time += " - %s" % self.meta['end']
 
     def print_debug(self):
         print("Station: %s" % self.station)
@@ -40,4 +41,7 @@ class Episode:
         print("Files: %s" % self.files)
         print("Image: %s" % self.thumbnail)
         print("Backdrop: %s" % self.backdrop)
+        print("Logo: %s" % self.logo)
+        print(" ----   Meta -----")
+        print(self.meta)
         print("----------------------------------")

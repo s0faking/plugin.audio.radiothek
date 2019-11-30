@@ -4,9 +4,10 @@
 from resources.lib.helpers import *
 from resources.lib.Directory import Directory
 from resources.lib.Episode import Episode
-from resources.lib.Broadcast import Broadcast
 
 import json
+import os
+
 try:
     from urllib.parse import urlencode
     from urllib.request import urlopen, Request
@@ -16,6 +17,7 @@ except ImportError:
 
 
 class RadioThek:
+    local_resource_path = "./"
     api_ref = "https://radiothek.orf.at/js/app.769b3884.js"
     api_base = "https://audioapi.orf.at"
     tag_url = "/radiothek/api/tags/%s"
@@ -23,92 +25,42 @@ class RadioThek:
     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36'
     api_reference = False
     stapled_content = False
-    station_nice = {'sbg': 'Radio Salzburg',
-                    'ooe': 'Radio Oberösterreich',
-                    'wie': 'Radio Wien',
-                    'vgrp': 'ORF Volksgruppen',
-                    'vbg': 'Radio Vorarlberg',
-                    'oe3': 'Hitradio Ö3',
-                    'fm4': 'FM4',
-                    'stm': 'Radio Steiermark',
-                    'sbg': 'Radio Salzburg',
-                    'noe': 'Radio Niederösterreich',
-                    'oe1': 'Ö1',
-                    'ktn': 'Radio Kärnten',
-                    'bgl': 'Radio Burgenland',
-                    'slo': 'Slovenski spored',
-                    'campus': 'Ö1 Campus',
-                    'tir': 'Radio Tirol'
-                    }
+    channel_icons = {
+        'bgl': 'bgl.png',
+        'vbg': 'vbg.png',
+        'ooe': 'ooe.png',
+        'noe': 'noe.png',
+        'ktn': 'ktn.png',
+        'sbg': 'sbg.png',
+        'stm': 'stm.png',
+        'tir': 'tir.png',
+        'wie': 'wie.png',
+        'fm4': 'fm4.png',
+        'oe1': 'oe1.png',
+        'oe3': 'oe3.png'
+    }
+    station_nice = {
+        'sbg': 'Radio Salzburg',
+        'ooe': 'Radio Oberösterreich',
+        'wie': 'Radio Wien',
+        'vgrp': 'ORF Volksgruppen',
+        'vbg': 'Radio Vorarlberg',
+        'oe3': 'Hitradio Ö3',
+        'fm4': 'FM4',
+        'stm': 'Radio Steiermark',
+        'sbg': 'Radio Salzburg',
+        'noe': 'Radio Niederösterreich',
+        'oe1': 'Ö1',
+        'ktn': 'Radio Kärnten',
+        'bgl': 'Radio Burgenland',
+        'slo': 'Slovenski spored',
+        'campus': 'Ö1 Campus',
+        'tir': 'Radio Tirol'
+    }
 
-    def __init__(self):
+    def __init__(self, local_resource_path):
         self.log("RadioThek API loaded")
-
-    def get_livestream(self):
-        self.get_api_reference()
-        list_items = []
-
-        for station in self.api_reference['stations']:
-            item = self.api_reference['stations'][station]
-            title = item['title']
-            description = ""
-
-            if 'livestream' in item:
-                link = item['livestream']
-                thumbnail = ""
-                backdrop = ""
-                print(link)
-                if link:
-                    episode = Episode(station, title, description, [link], 'Livestream', thumbnail, backdrop, station)
-                    list_items.append(episode)
-        return list_items
-
-
-    def get_tags(self):
-        staple = self.get_stapled()
-        list_items = []
-        if 'tags' in staple:
-            for tag_item in staple['tags']:
-                title = clean_html(tag_item['title'])
-                subtitle = clean_html(tag_item['subtitle'])
-                thumbnail = get_images(tag_item['image']['versions'], True)
-                backdrop = ""
-                images = get_images(tag_item['image']['versions'])
-                rel_link = self.tag_url % tag_item['key']
-                abs_link = "%s%s" % (self.api_base, rel_link)
-                list_items.append(Directory(title, subtitle, abs_link, thumbnail, images[0], backdrop))
-                self.log("-----------   Tags   -------------")
-                self.log("Title: %s" % title)
-                self.log("Subtitle: %s" % subtitle)
-                self.log("Thumbnail: %s" % thumbnail)
-                self.log("Link: %s" % abs_link)
-                for image in images:
-                    self.log("Images: %s" % image)
-        return list_items
-
-    def get_episode_detail(self, cms_id, items_json, loop_stream_id, start):
-        for item in items_json['items']:
-            if item['id'] == cms_id:
-                station = clean_html(item['station'])
-
-                title = clean_html(item['title'])
-                episode_title = "%s %s" % (station, title)
-                item_type = clean_html(item['entity'])
-                description = clean_html(item['description'])
-                thumbnail = ""
-                if 'images' in item and len(item['images']):
-                    thumbnail = get_images(item['images'][0]['versions'])[0]
-
-                station_infos = self.api_reference['stations'][item['station']]
-                host = station_infos['loopstream']['host']
-                host_station = station_infos['loopstream']['channel']
-                offset = item['start'] - start
-
-                parameters = self.build_stream_url(host_station, loop_stream_id, offset)
-                get_params = urlencode(parameters)
-                base_stream = "https://%s/?%s" % (host, get_params)
-
-                return Episode(cms_id, episode_title, description, [base_stream], item_type, thumbnail, "", station)
+        self.local_resource_path = local_resource_path
 
     @staticmethod
     def build_stream_url(host_station, loop_stream_id, offset):
@@ -119,121 +71,217 @@ class RadioThek:
                 'referer': 'radiothek.orf.at',
                 'offset': offset}
 
-    def get_broadcast_details(self, url):
-        detail_json = self.request_url(url, True)
-        return Broadcast(detail_json, self.api_reference)
+    def get_stream_base(self, station, start, loopStreamIds):
+        loopstream_path = ""
+        loopstream_offset = 0
+        for stream in loopStreamIds:
+            if start >= stream['start']:
+                loopstream_path = stream['loopStreamId']
+                loopstream_offset = start - stream['start']
 
-    def get_podcast_details(self, url):
-        episodes = []
-        self.log("Getting Podcast Details from %s" % url)
-        detail_json = self.request_url(url, True)
-        item_type = 'Podcast'
-        if 'data' in detail_json and 'episodes' in detail_json['data']:
-            data_json = detail_json['data']
-            for episode_json in data_json['episodes']:
-                cms_id = detail_json['slug']
+        api_reference = self.get_api_reference()
+        channel_infos = api_reference['stations'][station]
+        host = channel_infos['loopstream']['host']
+        host_channel = channel_infos['loopstream']['channel']
 
-                station = clean_html(data_json['author'])
-                title = clean_html(episode_json['title'])
-                episode_title = "%s %s" % (station, title)
+        return host, host_channel, loopstream_path, loopstream_offset
 
-                description = clean_html(episode_json['description'])
+    def get_stream_url(self, json_item, start=False):
+        station = self.get_station_name(json_item, True)
+        if start:
+            #print("Getting Streaming Url for Start: %s" % start)
+            (host, host_channel, loopStreamId, offset) = self.get_stream_base(station, start, json_item['streams'])
+        else:
+            #print("Getting Streaming Url from JSON")
+            (host, host_channel, loopStreamId, offset) = self.get_stream_base(station, json_item['start'], json_item['streams'])
 
-                thumbnail = data_json['image']
-                files = []
-                for audio_file in episode_json['enclosures']:
-                    files.append(audio_file['url'])
-                backdrop = ""
+        parameters = {'channel': host_channel,
+                      'id': loopStreamId,
+                      'shoutcast': 1,
+                      'player': 'radiothek_v1',
+                      'referer': 'radiothek.orf.at',
+                      'offset': offset}
+        get_params = url_encoder(parameters)
+        return "https://%s/?%s" % (host, get_params)
 
-                episode = Episode(cms_id, episode_title, description, files, item_type, thumbnail, backdrop, station)
-                episodes.append(episode)
-        return episodes
+    def format_title(self, json_item, show_station=False, unformatted=False):
+        subtitle_max_len = 20
+        format_title = ""
+        raw_title = ""
+        station_name = self.get_station_name(json_item)
+        if station_name and show_station:
+            format_title += "[%s] " % station_name
 
-    def get_tag_items(self, url):
-        items = []
-        self.log("Getting Tag Details from %s" % url)
-        data_json = self.request_url(url, True)
-        if data_json['items']:
-            for item_json in data_json['items']:
+        if 'title' in json_item and json_item['title'] is not None:
+            raw_title = json_item['title']
+            format_title += json_item['title']
+        elif 'name' in json_item and json_item['name'] is not None:
+            raw_title = json_item['name']
+            format_title += json_item['name']
+        else:
+            format_title = "[ -- %s -- ]" % station_name
+
+        if unformatted:
+            return raw_title
+
+        if 'programmTitle' in json_item and json_item['programmTitle'] is not None:
+            format_title += " %s" % json_item['programmTitle']
+        if 'broadcastDay' in json_item and json_item['broadcastDay'] is not None:
+            day = get_date_format(json_item['broadcastDay'])
+        else:
+            day = ""
+        if 'subtitle' in json_item and json_item['subtitle'] is not None:
+            subtitle = clean_html(json_item['subtitle'])
+        else:
+            subtitle = ""
+
+        if subtitle and len(subtitle) < subtitle_max_len:
+            format_title += " - %s" % subtitle
+        if day:
+            format_title += " - %s" % day
+
+
+        return format_title
+
+    def format_description(self, json_item):
+        format_description = ""
+        station_name = self.get_station_name(json_item)
+        if 'broadcastDay' in json_item and json_item['broadcastDay'] is not None:
+            day = get_date_format(json_item['broadcastDay'])
+        else:
+            if 'published' in json_item and json_item['published'] is not None:
+                day = get_time_format(json_item['published'])
+            else:
+                day = ""
+        if 'subtitle' in json_item and json_item['subtitle'] is not None:
+            subtitle = clean_html(json_item['subtitle'])
+        else:
+            subtitle = ""
+        if 'description' in json_item and json_item['description'] is not None:
+            description = clean_html(json_item['description'], True)
+        elif 'text' in json_item and json_item['text'] is not None:
+            description = clean_html(json_item['text'], True)
+        else:
+            description = ""
+
+        broadcasted = ""
+        if 'scheduledStart' in json_item and json_item['scheduledStart'] is not None:
+            broadcasted = get_time_format(json_item['scheduledStart'], False, True)
+
+        if 'scheduledEnd' in json_item and json_item['scheduledEnd'] is not None:
+            broadcasted += " - %s" % get_time_format(json_item['scheduledEnd'], False, True)
+
+        if station_name:
+            format_description += "Station: %s\n" % station_name
+        if day or broadcasted:
+            format_description += "Broadcasted: %s %s\n" % (day, broadcasted)
+        if subtitle:
+            format_description += "%s\n" % subtitle
+        if description:
+            format_description += "%s\n" % description
+        return format_description.strip()
+
+    def get_station_name(self, json_item, raw=False):
+        if 'station' in json_item and json_item['station'] is not None:
+            if raw:
+                return json_item['station']
+            if json_item['station'] in self.station_nice:
                 try:
-                    station = clean_html(item_json['station'])
+                    return self.station_nice[str(json_item['station'])].decode('utf-8')
+                except:
+                    return self.station_nice[str(json_item['station'])]
+            else:
+                return json_item['station']
+        if 'group' in json_item and json_item['group'] is not None:
+            return json_item['group']
+        return ""
 
-                    title = clean_html(item_json['title'])
-                    broadcasted = get_time_format(item_json['start'])
-                    directory_title = "%s (%s)" % (title, broadcasted)
+    def get_directory_image(self, json_item, image_type):
+        try:
+            station = self.get_station_name(json_item, True)
+            if station and station in self.channel_icons:
+                if image_type == 'logo':
+                    return os.path.join(self.local_resource_path, self.channel_icons[station])
 
-                    subtitle = clean_html(item_json['subtitle'])
-                    description = clean_html(item_json['description'])
+            if 'image' in json_item and json_item["image"] and len(json_item['image']) and 'versions' in json_item['image']:
+                image_arr = json_item['image']['versions']
+                if image_type == 'thumbnail':
+                    return get_images(image_arr, True)
+                elif image_type == 'backdrop':
+                    images = get_images(image_arr)
+                    if images and len(images):
+                        return images[0]
 
-                    if station in self.station_nice:
-                        directory_description = "[COLOR blue]%s[/COLOR]\n%s\n\n%s" % (self.station_nice[station], subtitle, description)
-                    else:
-                        directory_description = "%s\n\n%s" % (subtitle, description)
+            if 'image' in json_item:
+                if image_type == 'thumbnail':
+                    return json_item['image']
 
-                    thumbnail = ""
-                    if 'images' in item_json:
-                        if len(item_json['images']):
-                            thumbnail = get_images(item_json['images'][0]['versions'], True, True)
+            if 'images' in json_item and json_item["images"] and len(json_item['images']):
+                image_arr = json_item['images'][0]['versions']
+                if image_type == 'thumbnail':
+                    return get_images(image_arr, True)
+                elif image_type == 'backdrop':
+                    images = get_images(image_arr)
+                    if images and len(images):
+                        return images[0]
+        except:
+            self.log("Error loading image %s" % image_type)
+        return ""
 
-                    link = item_json['href']
-                    backdrop = ""
+    @staticmethod
+    def get_files(json_item):
+        files = []
+        if 'enclosures' in json_item:
+            for audio_file in json_item['enclosures']:
+                files.append(audio_file['url'])
+        return files
 
-                    tag_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station)
-                    items.append(tag_directory)
-                    #self.log("-----------   Items   -------------")
-                    #self.log("Station: %s" % station)
-                    #self.log("Title: %s" % title)
-                    #self.log("Subtitle: %s" % subtitle)
-                    #self.log("Description: %s" % description)
-                    #self.log("Thumbnail: %s" % thumbnail)
-                    #self.log("Broadcasted: %s" % broadcasted)
-                    #self.log("Link: %s" % link)
-                except Exception as e:
-                    self.log(str(e))
-                    self.log("[ERROR] Request Url: %s" % url)
-                    print(item_json)
-        return items
+    @staticmethod
+    def get_link(json_item):
+        if 'href' in json_item and json_item['href'] is not None:
+            return json_item['href']
+        elif 'target' in json_item and json_item['target']:
+            return json_item['target']
 
-    def get_broadcast(self):
+    def get_tag_link(self, json_item):
+        rel_link = self.tag_url % json_item['key']
+        return "%s%s" % (self.api_base, rel_link)
+
+    def get_tags(self):
         staple = self.get_stapled()
         list_items = []
-        if 'stations' in staple:
-            for station in staple['stations']:
-                if 'broadcast' in staple['stations'][station]['data']:
-                    broadcast_item = staple['stations'][station]['data']['broadcast']
+        if 'tags' in staple:
+            for tag_item in staple['tags']:
+                print(tag_item)
+                station = self.get_station_name(tag_item)
+                directory_title = self.format_title(tag_item)
+                directory_description = self.format_description(tag_item)
+                thumbnail = self.get_directory_image(tag_item, 'thumbnail')
+                backdrop = self.get_directory_image(tag_item, 'backdrop')
+                logo = self.get_directory_image(tag_item, 'logo')
+                link = self.get_tag_link(tag_item)
 
-                    station = clean_html(broadcast_item['station'])
-                    title = clean_html(broadcast_item['title'])
-                    broadcasted = get_time_format(broadcast_item['scheduledStart'], False, True)
-                    broadcastedUntil = get_time_format(broadcast_item['scheduledEnd'], False, True)
-                    directory_title = "%s (%s-%s)" % (title, broadcasted, broadcastedUntil)
+                tag_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station, logo)
+                list_items.append(tag_directory)
 
-                    subtitle = clean_html(broadcast_item['subtitle'])
-                    description = clean_html(broadcast_item['description'])
-
-                    if station in self.station_nice:
-                        directory_description = "[COLOR blue]%s[/COLOR]\n%s\n\n%s" % (self.station_nice[str(station)].decode('utf-8'), subtitle, description)
-                    else:
-                        directory_description = "%s\n\n%s" % (subtitle, description)
-
-                    if broadcast_item["images"]:
-                        thumbnail = get_images(broadcast_item['images'][0]['versions'], True)
-                    else:
-                        thumbnail = ""
-                    backdrop = ""
-                    link = broadcast_item['href']
-
-                    broadcast_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station)
-                    list_items.append(broadcast_directory)
-                    #self.log("-----------   Broadcast   -------------")
-                    #self.log("Station: %s" % station)
-                    #self.log("Title: %s" % title)
-                    #self.log("Subtitle: %s" % subtitle)
-                    #self.log("Description: %s" % description)
-                    #self.log("Thumbnail: %s" % thumbnail)
-                    #self.log("Broadcasted: %s" % get_time_format(broadcast_item['scheduledStart']))
-                    #self.log("Link: %s" % link)
         return list_items
+
+    def get_tag_details(self, url):
+        items = []
+        self.log("Getting Tag Details from %s" % url)
+        tag_json = self.request_url(url, True)
+        if tag_json['items']:
+            for tag_item in tag_json['items']:
+                station = self.get_station_name(tag_item)
+                directory_title = self.format_title(tag_item)
+                directory_description = self.format_description(tag_item)
+                thumbnail = self.get_directory_image(tag_item, 'thumbnail')
+                backdrop = self.get_directory_image(tag_item, 'backdrop')
+                logo = self.get_directory_image(tag_item, 'logo')
+                link = self.get_link(tag_item)
+                tag_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station, logo)
+                items.append(tag_directory)
+        return items
 
     def get_highlights(self):
         staple = self.get_stapled()
@@ -243,70 +291,34 @@ class RadioThek:
                 if 'highlights' in staple['stations'][station]['data']:
                     broadcast_items = staple['stations'][station]['data']['highlights']
                     for broadcast_item in broadcast_items:
-                        title = clean_html(broadcast_item['title'])
-                        if 'broadcastDay' in broadcast_item and broadcast_item['broadcastDay'] is not None:
-                            broadcasted = get_date_format(broadcast_item['broadcastDay'])
-                            directory_title = "%s - %s" % (title, broadcasted)
-                        else:
-                            directory_title = station, title
-                        description = ""
-
-                        if station in self.station_nice:
-                            station_name = self.station_nice[str(station)].decode('utf-8')
-                        else:
-                            station_name = station
-
-                        if 'text' in broadcast_item:
-                            description = clean_html(broadcast_item['text'])
-                        directory_description = "[COLOR blue]%s[/COLOR] \n%s" % (station_name, description)
-
-                        if broadcast_item["images"]:
-                            thumbnail = get_images(broadcast_item['images'][0]['versions'], True)
-                        else:
-                            thumbnail = ""
-                        backdrop = ""
-                        link = broadcast_item['target']
-
-                        broadcast_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station)
+                        broadcast_item['station'] = station
+                        directory_title = self.format_title(broadcast_item)
+                        directory_description = self.format_description(broadcast_item)
+                        thumbnail = self.get_directory_image(broadcast_item, 'thumbnail')
+                        backdrop = self.get_directory_image(broadcast_item, 'backdrop')
+                        logo = self.get_directory_image(broadcast_item, 'logo')
+                        link = self.get_link(broadcast_item)
+                        broadcast_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station, logo)
                         list_items.append(broadcast_directory)
-                        #self.log("-----------   Broadcast   -------------")
-                        #self.log("Station: %s" % station)
-                        #self.log("Title: %s" % title)
-                        #self.log("Subtitle: %s" % subtitle)
-                        #self.log("Description: %s" % description)
-                        #self.log("Thumbnail: %s" % thumbnail)
-                        #self.log("Broadcasted: %s" % get_time_format(broadcast_item['scheduledStart']))
-                        #self.log("Link: %s" % link)
         return list_items
 
     def get_archive(self):
         staple = self.get_stapled()
         list_items = []
         if 'archive' in staple:
-            for archive_item in staple['archive']:
-                station = clean_html(archive_item['data']['author'])
-                title = clean_html(archive_item['data']['title'])
-                broadcasted = get_time_format(archive_item['data']['published'])
-                directory_title = "[%s] %s (%s)" % (station, title, broadcasted)
+            for archive_item_container in staple['archive']:
+                archive_item = archive_item_container['data']
 
-                subtitle = clean_html(archive_item['data']['subtitle'])
-                description = clean_html(archive_item['data']['description'])
-                directory_description = "%s\n\n%s" % (subtitle, description)
+                station = self.get_station_name(archive_item)
+                directory_title = self.format_title(archive_item)
+                directory_description = self.format_description(archive_item)
+                thumbnail = self.get_directory_image(archive_item, 'thumbnail')
+                backdrop = self.get_directory_image(archive_item, 'backdrop')
+                logo = self.get_directory_image(archive_item, 'logo')
+                link = self.get_link(archive_item_container)
 
-                thumbnail = archive_item['data']['image']
-                backdrop = ""
-                link = archive_item['href']
-
-                archive_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station)
+                archive_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station, logo)
                 list_items.append(archive_directory)
-                #self.log("-----------   Archive   -------------")
-                #self.log("Station: %s" % station)
-                #self.log("Title: %s" % title)
-                #self.log("Subtitle: %s" % subtitle)
-                #self.log("Description: %s" % description)
-                #self.log("Thumbnail: %s" % thumbnail)
-                #self.log("Broadcasted: %s" % broadcasted)
-                #self.log("Link: %s" % link)
         return list_items
 
     def get_podcasts(self):
@@ -314,30 +326,147 @@ class RadioThek:
         list_items = []
         if 'podcasts' in staple:
             for station in staple['podcasts']:
-                for podcast_item in staple['podcasts'][station]:
-                    station = clean_html(podcast_item['data']['author'])
+                for podcast_item_container in staple['podcasts'][station]:
+                    podcast_item = podcast_item_container['data']
+                    podcast_item['station'] = station
 
-                    broadcasted = get_time_format(podcast_item['data']['published'])
-                    title = clean_html(podcast_item['data']['title'])
-                    directory_title = "%s (%s)" % (title, broadcasted)
+                    station = self.get_station_name(podcast_item)
+                    directory_title = self.format_title(podcast_item)
+                    directory_description = self.format_description(podcast_item)
+                    thumbnail = self.get_directory_image(podcast_item, 'thumbnail')
+                    backdrop = self.get_directory_image(podcast_item, 'backdrop')
+                    logo = self.get_directory_image(podcast_item, 'logo')
+                    link = self.get_link(podcast_item_container)
 
-                    subtitle = clean_html(podcast_item['data']['subtitle'])
-                    description = clean_html(podcast_item['data']['description'])
-                    directory_description = "[B]%s[/B]\n%s\n\n%s" % (station, subtitle, description)
-
-                    thumbnail = podcast_item['data']['image']
-
-                    link = podcast_item['href']
-                    podcast_directory = Directory(directory_title, directory_description, link, thumbnail, "", station)
+                    podcast_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station, logo)
                     list_items.append(podcast_directory)
-                    #self.log("-----------   Podcast   -------------")
-                    #self.log("Station: %s" % station)
-                    #self.log("Title: %s" % title)
-                    #self.log("Subtitle: %s" % subtitle)
-                    #self.log("Description: %s" % description)
-                    #self.log("Thumbnail: %s" % thumbnail)
-                    #self.log("Broadcasted: %s" % broadcasted)
-                    #self.log("Link: %s" % link)
+        return list_items
+
+    def get_podcast_details(self, url):
+        episodes = []
+        self.log("Getting Podcast Details from %s" % url)
+        detail_json = self.request_url(url, True)
+        item_type = 'Podcast'
+        if 'data' in detail_json and 'episodes' in detail_json['data']:
+            data_json = detail_json['data']
+            show_title = self.format_title(data_json, True, True)
+            for episode_json in data_json['episodes']:
+                cms_id = detail_json['slug']
+                station = self.get_station_name(detail_json)
+                raw_episode_title = self.format_title(episode_json, True, True)
+                episode_title = self.format_title(episode_json)
+                if raw_episode_title != show_title:
+                    episode_title = "%s - %s" % (show_title, episode_title)
+                episode_description = self.format_description(episode_json)
+                thumbnail = self.get_directory_image(data_json, 'thumbnail')
+                backdrop = self.get_directory_image(data_json, 'backdrop')
+                logo = self.get_directory_image(detail_json, 'logo')
+                files = self.get_files(episode_json)
+                meta = self.get_broadcast_meta(episode_json)
+                episode = Episode(cms_id, episode_title, episode_description, files, item_type, thumbnail, backdrop, station, logo, 0, meta)
+                episodes.append(episode)
+        return episodes
+
+    def get_broadcast_details(self, url):
+        list_items = []
+        broadcast_details = self.request_url(url, True)
+        if broadcast_details and 'entity' in broadcast_details and broadcast_details['entity'] == 'Broadcast':
+            cms_id = broadcast_details['id']
+            item_type = broadcast_details['entity']
+            station = self.get_station_name(broadcast_details)
+            directory_title = self.format_title(broadcast_details, True, True)
+            directory_description = self.format_description(broadcast_details)
+            thumbnail = self.get_directory_image(broadcast_details, 'thumbnail')
+            backdrop = self.get_directory_image(broadcast_details, 'backdrop')
+            logo = self.get_directory_image(broadcast_details, 'logo')
+            stream_url = self.get_stream_url(broadcast_details)
+            meta = self.get_broadcast_meta(broadcast_details)
+            broadcast_episode = Episode(cms_id, directory_title, directory_description, [stream_url], item_type, thumbnail, backdrop, station, logo, 0, meta)
+            list_items.append(broadcast_episode)
+            if 'items' in broadcast_details:
+                for broadcast_detail_item in broadcast_details['items']:
+                    broadcast_episode = self.get_broadcast_items(broadcast_detail_item, broadcast_details)
+                    list_items.append(broadcast_episode)
+        return list_items
+
+    def get_broadcast_items(self, broadcast_json, parent_broadcast_json):
+        if broadcast_json and 'entity' in broadcast_json and broadcast_json['entity'] == 'BroadcastItem':
+            hidden = 0
+            cms_id = broadcast_json['id']
+            item_type = broadcast_json['entity']
+            station = self.get_station_name(parent_broadcast_json)
+            parent_directory_title = self.format_title(parent_broadcast_json, True, True)
+            directory_title = "%s - %s" % (parent_directory_title, self.format_title(broadcast_json, True, True))
+            directory_description = self.format_description(broadcast_json)
+            thumbnail = self.get_directory_image(broadcast_json, 'thumbnail')
+            if not thumbnail:
+                thumbnail = self.get_directory_image(parent_broadcast_json, 'thumbnail')
+            backdrop = self.get_directory_image(broadcast_json, 'backdrop')
+            if not backdrop:
+                backdrop = self.get_directory_image(parent_broadcast_json, 'backdrop')
+            logo = self.get_directory_image(parent_broadcast_json, 'logo')
+            if not logo:
+                logo = self.get_directory_image(parent_broadcast_json, 'logo')
+
+            stream_url = self.get_stream_url(parent_broadcast_json, broadcast_json['start'])
+            meta = self.get_broadcast_meta(broadcast_json)
+            if not self.format_title(broadcast_json, True, True):
+                hidden = 1
+            return Episode(cms_id, directory_title, directory_description, [stream_url], item_type, thumbnail, backdrop, station, logo, hidden, meta)
+
+    def get_broadcast_meta(self, broadcast_json):
+        meta = {}
+        print(broadcast_json)
+        if 'interpreter' in broadcast_json:
+            meta['artist'] = broadcast_json['interpreter']
+            meta['trackname'] = broadcast_json['title']
+        if 'duration' in broadcast_json:
+            meta['duration'] = broadcast_json['duration']
+        elif 'start' in broadcast_json and 'end' in broadcast_json:
+            meta['duration'] = broadcast_json['end'] - broadcast_json['start']
+        if 'start' in broadcast_json:
+            meta['start'] = get_time_format(broadcast_json['start'], False, True)
+        if 'end' in broadcast_json:
+            meta['end'] = get_time_format(broadcast_json['end'], False, True)
+        return meta
+
+    def get_broadcast(self):
+        staple = self.get_stapled()
+        list_items = []
+        if 'stations' in staple:
+            for station in staple['stations']:
+                if 'broadcast' in staple['stations'][station]['data']:
+                    broadcast_item = staple['stations'][station]['data']['broadcast']
+
+                    station = self.get_station_name(broadcast_item)
+                    directory_title = self.format_title(broadcast_item)
+                    directory_description = self.format_description(broadcast_item)
+                    thumbnail = self.get_directory_image(broadcast_item, 'thumbnail')
+                    backdrop = self.get_directory_image(broadcast_item, 'backdrop')
+                    logo = self.get_directory_image(broadcast_item, 'logo')
+                    link = self.get_link(broadcast_item)
+
+                    broadcast_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station, logo)
+                    list_items.append(broadcast_directory)
+        return list_items
+
+    def get_livestream(self):
+        self.get_api_reference()
+        list_items = []
+
+        for station in self.api_reference['stations']:
+            item = self.api_reference['stations'][station]
+            title = item['title']
+            description = "%s Livestream" % title
+
+            if 'livestream' in item:
+                link = item['livestream']
+                thumbnail = ""
+                backdrop = ""
+                logo = self.get_directory_image({'station': station}, 'logo')
+                if link:
+                    episode = Episode(station, title, description, [link], 'Livestream', thumbnail, backdrop, station, logo)
+                    list_items.append(episode)
         return list_items
 
     def get_api_reference(self):
