@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from resources.lib.helpers import *
+from resources.lib.Helpers import *
 from resources.lib.Directory import Directory
 from resources.lib.Episode import Episode
 
@@ -51,7 +51,6 @@ class RadioThek:
         'oe3': 'Hitradio Ö3',
         'fm4': 'FM4',
         'stm': 'Radio Steiermark',
-        'sbg': 'Radio Salzburg',
         'noe': 'Radio Niederösterreich',
         'oe1': 'Ö1',
         'ktn': 'Radio Kärnten',
@@ -92,12 +91,9 @@ class RadioThek:
     def get_stream_url(self, json_item, start=False):
         station = self.get_station_name(json_item, True)
         if start:
-            #print("Getting Streaming Url for Start: %s" % start)
             (host, host_channel, loopStreamId, offset) = self.get_stream_base(station, start, json_item['streams'])
         else:
-            #print("Getting Streaming Url from JSON")
             (host, host_channel, loopStreamId, offset) = self.get_stream_base(station, json_item['start'], json_item['streams'])
-
         parameters = {'channel': host_channel,
                       'id': loopStreamId,
                       'shoutcast': 1,
@@ -142,7 +138,6 @@ class RadioThek:
             format_title += " - %s" % subtitle
         if day:
             format_title += " - %s" % day
-
 
         return format_title
 
@@ -455,9 +450,9 @@ class RadioThek:
                 hidden = 1
             return Episode(cms_id, directory_title, directory_description, [stream_url], item_type, thumbnail, backdrop, station, logo, hidden, meta)
 
-    def get_broadcast_meta(self, broadcast_json):
+    @staticmethod
+    def get_broadcast_meta(broadcast_json):
         meta = {}
-        print(broadcast_json)
         if 'interpreter' in broadcast_json:
             meta['artist'] = broadcast_json['interpreter']
             meta['trackname'] = broadcast_json['title']
@@ -535,20 +530,17 @@ class RadioThek:
                 list_items.append(search_directory)
         return list_items
 
-
     def get_api_reference(self):
         if not self.api_reference:
             content = self.request_url(self.api_ref, True, False)
             self.api_reference = get_js_json(content)
         return self.api_reference
 
-    # gets the station list
     def get_stapled(self):
         if not self.stapled_content:
             self.stapled_content = self.request_url(self.staple_url)
         return self.stapled_content
 
-    # request external url, returns the url content
     def request_url(self, url, absolute_url=False, parse_json=True):
         if not absolute_url:
             request_url = "%s%s" % (self.api_base, url)
@@ -568,4 +560,3 @@ class RadioThek:
             print(msg)
         except Exception as e:
             print(msg.encode('utf-8'))
-

@@ -3,7 +3,9 @@
 
 
 class Episode:
-    def __init__(self, cms_id, title, description, files, item_type, thumbnail, backdrop, station, logo, hidden=0, meta=[]):
+    def __init__(self, cms_id, title, description, files, item_type, thumbnail, backdrop, station, logo, hidden=0, meta=None):
+        if meta is None:
+            meta = []
         self.hidden = hidden
         self.id = cms_id
         self.title = title
@@ -20,7 +22,7 @@ class Episode:
         self.trackname = ""
         self.artist = ""
         self.meta = meta
-        if self.meta and  len(self.meta):
+        if self.meta and len(self.meta):
             if 'trackname' in self.meta:
                 self.trackname = self.meta['trackname']
             if 'artist' in meta:

@@ -3,7 +3,6 @@
 import re
 import json
 from datetime import datetime
-from pprint import pprint
 
 try:
     from urllib.parse import urlencode,unquote
@@ -11,6 +10,17 @@ try:
 except ImportError:
     from urllib2 import urlopen, Request
     from urllib import urlencode, unquote
+
+
+def parameters_string_to_dict(parameters):
+    param_dict = {}
+    if parameters:
+        param_pairs = parameters[1:].split("&")
+        for param_pair in param_pairs:
+            param_splits = param_pair.split('=')
+            if (len(param_splits)) == 2:
+                param_dict[param_splits[0]] = param_splits[1]
+    return param_dict
 
 
 def unquote_url(url):
@@ -24,10 +34,6 @@ def unquote_url(url):
 
 def url_encoder(parameters):
     return urlencode(parameters)
-
-
-def object_print(obj):
-    pprint(obj)
 
 
 def get_js_json(js_data):
@@ -80,7 +86,6 @@ def get_date_format(datestring):
                 return date.strftime("%d.%m.%Y")
         return ""
     except Exception as e:
-        #print("Error with datestring %s" % datestring)
         str_dat = str(datestring)
         return "%s.%s.%s" % (str_dat[6:8], str_dat[4:6], str_dat[0:4])
 
