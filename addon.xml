@@ -8,7 +8,11 @@
         <provides>audio</provides>
     </extension>
     <extension point="xbmc.addon.metadata">
-        <summary lang="en">This is a Kodi Addon to provide acces to the ORF Radiothek (Austrian public service broadcaster)</summary>
+        <summary lang="en">ORF Radiothek - Radio Streaming</summary>
+        <summary lang="de">ORF Radiothek - Radio Streaming</summary>
+        <description lang="en">This is a Kodi Addon to provides access to the ORF Radiothek (Austrian public service broadcaster) Streaming Portal (Live Radio, Podcasts, Archive, ...). </description>
+        <description lang="de">Die ORF Radiothek stellt das Radiomaterial der öffentlich-rechtlichen Radiosender aus Österreich zur Verfügung. Neben Livestreaming können auch vergangene Sendungen und eine Vielzahl an Podcasts abgerufen werden.</description>
+        <language>de en</language>
         <license>GNU General Public License, v2</license>
         <platform>all</platform>
         <email>sofaking@gettingmoney.at</email>

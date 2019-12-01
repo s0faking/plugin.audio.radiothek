@@ -7,6 +7,9 @@ import xbmcplugin
 import sys
 
 
+
+
+
 def get_media_path():
     settings = xbmcaddon.Addon()
     basepath = settings.getAddonInfo('path')
@@ -58,6 +61,17 @@ def add_directory(title, banner, backdrop, logo, description, link, mode, plugin
     xbmcplugin.addDirectoryItem(pluginhandle, url=u, listitem=liz, isFolder=True)
 
 
+def get_translation(msgid, default=False):
+    settings = xbmcaddon.Addon()
+    translation = settings.getLocalizedString
+    try:
+        if not translation(msgid+100) and default:
+            return default
+        return translation(msgid+100).encode('utf-8')
+    except:
+        return translation(msgid+100)
+
+
 def add_episode(episode, pluginhandle):
     if not episode.hidden:
         if episode.artist:
@@ -81,7 +95,7 @@ def add_episode(episode, pluginhandle):
             "Plot": episode.description,
         }
         if episode.item_type == 'BroadcastItem' and episode.artist:
-            info_labels['Plot'] = "[B]Artist:[/B] [COLOR blue]%s[/COLOR] \n[B]Track:[/B] [COLOR blue]%s[/COLOR]\n\n[LIGHT]%s[/LIGHT]" % (episode.artist, episode.trackname, info_labels['Plot'])
+            info_labels['Plot'] = "[B]%s:[/B] [COLOR blue]%s[/COLOR] \n[B]%s:[/B] [COLOR blue]%s[/COLOR]\n\n[LIGHT]%s[/LIGHT]" % (get_translation(30003, 'Artist'), episode.artist, get_translation(30004, 'Track'), episode.trackname, info_labels['Plot'])
 
         liz.setInfo(type="Video", infoLabels=info_labels)
         if episode.thumbnail:
@@ -119,7 +133,7 @@ def add_stream(episode, pluginhandle):
         "Plot": episode.description,
     }
     if episode.item_type == 'BroadcastItem' and episode.artist:
-        info_labels['Plot'] = "[B]Artist:[/B] [COLOR blue]%s[/COLOR] \n[B]Track:[/B] [COLOR blue]%s[/COLOR]\n\n[LIGHT]%s[/LIGHT]" % (episode.artist, episode.trackname, info_labels['Plot'])
+        info_labels['Plot'] = "[B]%s:[/B] [COLOR blue]%s[/COLOR] \n[B]%s:[/B] [COLOR blue]%s[/COLOR]\n\n[LIGHT]%s[/LIGHT]" % (get_translation(30003, 'Artist'), episode.artist, get_translation(30004, 'Track'), episode.trackname, info_labels['Plot'])
 
     liz.setInfo(type="Video", infoLabels=info_labels)
     liz.setProperty('IsPlayable', 'true')
@@ -127,21 +141,21 @@ def add_stream(episode, pluginhandle):
 
 
 def get_navigation(pluginhandle):
-    add_directory("Highlights", "", "", "", "", "", "highlights", pluginhandle)
-    add_directory("Broadcasts", "", "", "", "", "", "broadcast", pluginhandle)
-    add_directory("Podcasts", "", "", "", "", "", "podcasts", pluginhandle)
-    add_directory("Topics", "", "", "", "", "", "tags", pluginhandle)
-    add_directory("Archive", "", "", "", "", "", "archive", pluginhandle)
-    add_directory("Live", "", "", "", "", "", "live", pluginhandle)
-    add_directory("Search", "", "", "", "", "", "search", pluginhandle)
-    add_directory("Missed a show?", "", "", "", "", "", "missed_show", pluginhandle)
+    add_directory(get_translation(30005, "Highlights"), "", "", "", "", "", "highlights", pluginhandle)
+    add_directory(get_translation(30006, "Broadcasts"), "", "", "", "", "", "broadcast", pluginhandle)
+    add_directory(get_translation(30007, "Podcasts"), "", "", "", "", "", "podcasts", pluginhandle)
+    add_directory(get_translation(30008, "Topics"), "", "", "", "", "", "tags", pluginhandle)
+    add_directory(get_translation(30009, "Archive"), "", "", "", "", "", "archive", pluginhandle)
+    add_directory(get_translation(30010, "Live"), "", "", "", "", "", "live", pluginhandle)
+    add_directory(get_translation(30011, "Search"), "", "", "", "", "", "search", pluginhandle)
+    add_directory(get_translation(30012, "Missed a show?"), "", "", "", "", "", "missed_show", pluginhandle)
     xbmcplugin.endOfDirectory(pluginhandle)
 
 
 def get_input():
     kb = xbmc.Keyboard()
     kb.setDefault('')
-    kb.setHeading('Enter a search phrase ...')
+    kb.setHeading(get_translation(30013, 'Enter a search phrase ...'))
     kb.setHiddenInput(False)
     kb.doModal()
     if kb.isConfirmed():
@@ -246,7 +260,7 @@ def main(pluginhandle):
             add_stream(episode, pluginhandle)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'search':
-        add_directory("Search ...", "", "", "", "", "", "search_detail", pluginhandle)
+        add_directory(get_translation(30014, "Search ..."), "", "", "", "", "", "search_detail", pluginhandle)
         getSearchHistory(pluginhandle)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'search_detail':
@@ -286,7 +300,7 @@ def main(pluginhandle):
                 for day_item in day_list_items:
                     add_directory_item(day_item, "missed_show_detail", pluginhandle)
             else:
-                add_directory("No items for this station", "", "", "", "", "", "missed_show", pluginhandle)
+                add_directory(get_translation(30015, "No items for this station"), "", "", "", "", "", "missed_show", pluginhandle)
             xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'missed_show_detail':
         list_items = api.get_day_selection_details(link)
@@ -300,6 +314,7 @@ def main(pluginhandle):
         xbmcplugin.setResolvedUrl(pluginhandle, True, listitem=play_item)
         xbmcplugin.endOfDirectory(pluginhandle)
 
-
+settings = xbmcaddon.Addon()
+translation_ref = settings.getLocalizedString
 resource_path = get_media_path()
-api = RadioThek(resource_path)
+api = RadioThek(resource_path, translation_ref)

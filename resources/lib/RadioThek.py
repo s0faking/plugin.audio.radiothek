@@ -60,9 +60,10 @@ class RadioThek:
         'tir': 'Radio Tirol'
     }
 
-    def __init__(self, local_resource_path):
+    def __init__(self, local_resource_path, translation):
         self.log("RadioThek API loaded")
         self.local_resource_path = local_resource_path
+        self.translation = translation
 
     @staticmethod
     def build_stream_url(host_station, loop_stream_id, offset):
@@ -72,6 +73,14 @@ class RadioThek:
                 'player': 'radiothek_v1',
                 'referer': 'radiothek.orf.at',
                 'offset': offset}
+
+    def get_translation(self, msgid, default=False):
+        try:
+            if not self.translation(msgid+100) and default:
+                return default
+            return self.translation(msgid+100).encode('utf-8')
+        except:
+            return self.translation(msgid+100)
 
     def get_stream_base(self, station, start, loopStreamIds):
         loopstream_path = ""
@@ -170,9 +179,9 @@ class RadioThek:
             broadcasted += " - %s" % get_time_format(json_item['scheduledEnd'], False, True)
 
         if station_name:
-            format_description += "Station: %s\n" % station_name
+            format_description += "%s: %s\n" % (self.get_translation(30001, 'Broadcasted'), station_name)
         if day or broadcasted:
-            format_description += "Broadcasted: %s %s\n" % (day, broadcasted)
+            format_description += "%s: %s %s\n" % (self.get_translation(30002, 'Broadcasted'), day, broadcasted)
         if subtitle:
             format_description += "%s\n" % subtitle
         if description:
@@ -247,7 +256,7 @@ class RadioThek:
 
     def get_day_selection(self, station):
         url = self.broadcast_url % station
-        print("Loading url %s" % url)
+        self.log("Loading url %s" % url)
         try:
             days_json = self.request_url(url)
             list_items = []
@@ -264,7 +273,7 @@ class RadioThek:
                     list_items.append(day_directory)
             return list_items
         except:
-            print("This station has no 'missed a show?' feature.")
+            self.log("This station has no 'missed a show?' feature.")
 
     def get_day_selection_details(self, url):
         show_json = self.request_url(url)
