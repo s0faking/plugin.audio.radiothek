@@ -38,8 +38,6 @@ def add_directory_item(directory, mode, pluginhandle):
     }
     liz.setInfo(type="Video", infoLabels=info_labels)
 
-    print("Thumbnail: %s" % directory.thumbnail)
-
     if directory.logo:
         channel_icon_base = get_media_path()
         logo_path = os.path.join(channel_icon_base, directory.logo)
@@ -62,7 +60,6 @@ def add_directory(title, banner, backdrop, logo, description, link, mode, plugin
     }
     liz.setInfo(type="Video", infoLabels=info_labels)
 
-    print("Banner %s" % banner)
     if not banner:
         banner = logo
     if logo:
@@ -151,6 +148,7 @@ def get_navigation(pluginhandle):
     add_directory("Archive", "", "", "", "", "", "archive", pluginhandle)
     add_directory("Live", "", "", "", "", "", "live", pluginhandle)
     add_directory("Search", "", "", "", "", "", "search", pluginhandle)
+    add_directory("Missed a show?", "", "", "", "", "", "missed_show", pluginhandle)
     xbmcplugin.endOfDirectory(pluginhandle)
 
 
@@ -219,7 +217,6 @@ def getJsonFile(file):
 
 def getSearchHistory(pluginhandle):
     history = searchHistoryGet()
-    print(history)
     for search_query in reversed(history):
         if search_query.strip() != '':
             add_directory(search_query, "", "", "", "", search_query, "search_detail", pluginhandle)
@@ -229,8 +226,6 @@ def main(pluginhandle):
     params = parameters_string_to_dict(sys.argv[2])
     mode = params.get('mode')
     link = unquote_url(params.get('link'))
-    print("MODE %s" % mode)
-    print("LINK %s" % link)
 
     if mode is None:
         get_navigation(pluginhandle)
@@ -273,7 +268,6 @@ def main(pluginhandle):
             query = get_input()
         else:
             query = link
-        print("Searching for %s" % query)
         if query:
             list_items = api.get_search(query)
             for list_item in list_items:
@@ -293,6 +287,25 @@ def main(pluginhandle):
         broadcasts = api.get_broadcast_details(link)
         for broadcast in broadcasts:
             add_episode(broadcast, pluginhandle)
+        xbmcplugin.endOfDirectory(pluginhandle)
+    elif mode == 'missed_show':
+        station_list_keys = list(api.station_nice.keys())
+        station_list = list(api.station_nice.values())
+        dialog = xbmcgui.Dialog()
+        station_selected = dialog.contextmenu(station_list)
+        station_code = station_list_keys[station_selected]
+        if station_code:
+            day_list_items = api.get_day_selection(station_code)
+            if day_list_items:
+                for day_item in day_list_items:
+                    add_directory_item(day_item, "missed_show_detail", pluginhandle)
+            else:
+                add_directory("No items for this station", "", "", "", "", "", "missed_show", pluginhandle)
+            xbmcplugin.endOfDirectory(pluginhandle)
+    elif mode == 'missed_show_detail':
+        list_items = api.get_day_selection_details(link)
+        for list_item in list_items:
+            add_directory_item(list_item, "broadcast_detail", pluginhandle)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'play':
         play_link = "%s|User-Agent=%s" % (link, api.user_agent)

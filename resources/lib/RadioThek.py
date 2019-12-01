@@ -21,6 +21,8 @@ class RadioThek:
     api_ref = "https://radiothek.orf.at/js/app.769b3884.js"
     api_base = "https://audioapi.orf.at"
     tag_url = "/radiothek/api/tags/%s"
+    broadcast_url = "/%s/json/4.0/broadcasts"
+    broadcast_detail_url = "/%s/json/4.0/broadcasts/%s"
     search_url = "/radiothek/api/search"
     staple_url = "/radiothek/stapled.json?_o=radiothek.orf.at"
     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36'
@@ -248,12 +250,50 @@ class RadioThek:
         rel_link = self.tag_url % json_item['key']
         return "%s%s" % (self.api_base, rel_link)
 
+    def get_day_selection(self, station):
+        url = self.broadcast_url % station
+        print("Loading url %s" % url)
+        try:
+            days_json = self.request_url(url)
+            list_items = []
+            for day in days_json:
+                if 'broadcasts' in day and day['broadcasts'] and len(day['broadcasts']):
+                    station_name = self.get_station_name(day['broadcasts'][0])
+                    directory_title = "%s - %s" % (station_name, get_date_format(day['day']))
+                    directory_description = ""
+                    thumbnail = ""
+                    backdrop = ""
+                    logo = os.path.join(self.local_resource_path, self.channel_icons[station])
+                    link = self.broadcast_detail_url % (station, day['day'])
+                    day_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station, logo)
+                    list_items.append(day_directory)
+            return list_items
+        except:
+            print("This station has no 'missed a show?' feature.")
+
+    def get_day_selection_details(self, url):
+        show_json = self.request_url(url)
+        list_items = []
+        for show in show_json:
+            station = self.get_station_name(show)
+            title = show['title']
+            time_start = "%s | " % get_time_format(show['start'], False, True)
+            directory_title = "%s%s" % (time_start, title)
+            directory_description = self.format_description(show)
+            thumbnail = self.get_directory_image(show, 'thumbnail')
+            backdrop = self.get_directory_image(show, 'backdrop')
+            logo = self.get_directory_image(show, 'logo')
+            link = self.get_link(show)
+
+            broadcast_directory = Directory(directory_title, directory_description, link, thumbnail, backdrop, station, logo)
+            list_items.append(broadcast_directory)
+        return list_items
+
     def get_tags(self):
         staple = self.get_stapled()
         list_items = []
         if 'tags' in staple:
             for tag_item in staple['tags']:
-                print(tag_item)
                 station = self.get_station_name(tag_item)
                 directory_title = self.format_title(tag_item)
                 directory_description = self.format_description(tag_item)
