@@ -7,9 +7,6 @@ import xbmcplugin
 import sys
 
 
-
-
-
 def get_media_path():
     settings = xbmcaddon.Addon()
     basepath = settings.getAddonInfo('path')

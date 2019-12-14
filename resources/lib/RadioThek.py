@@ -78,9 +78,9 @@ class RadioThek:
         try:
             if not self.translation(msgid+100) and default:
                 return default
-            return self.translation(msgid+100).encode('utf-8')
-        except:
             return self.translation(msgid+100)
+        except:
+            return self.translation(msgid+100).encode('utf-8')
 
     def get_stream_base(self, station, start, loopStreamIds):
         loopstream_path = ""
