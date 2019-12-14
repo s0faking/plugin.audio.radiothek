@@ -16,6 +16,7 @@
         <platform>all</platform>
         <email>sofaking@gettingmoney.at</email>
         <website>https://radiothek.orf.at</website>
+        <forum>https://forum.kodi.tv/showthread.php?tid=350090</forum>
         <source>https://github.com/s0faking/plugin.audio.radiothek</source>
         <assets>
           <icon>icon.png</icon>
