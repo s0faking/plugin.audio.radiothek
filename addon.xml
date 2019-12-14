@@ -16,6 +16,9 @@
         <platform>all</platform>
         <email>sofaking@gettingmoney.at</email>
         <website>https://radiothek.orf.at</website>
-        <source>https://github.com/s0faking/plugin.video.radiothek</source>
+        <source>https://github.com/s0faking/plugin.audio.radiothek</source>
+        <assets>
+          <icon>icon.png</icon>
+      </assets>
     </extension>
 </addon>
