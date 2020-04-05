@@ -33,17 +33,3 @@ class Episode:
                 self.time = self.meta['start']
             if 'end' in self.meta:
                 self.time += " - %s" % self.meta['end']
-
-    def print_debug(self):
-        print("Station: %s" % self.station)
-        print("ID: %s" % self.id)
-        print("Type: %s" % self.item_type)
-        print("Name: %s" % self.title)
-        print("Description: %s" % self.description)
-        print("Files: %s" % self.files)
-        print("Image: %s" % self.thumbnail)
-        print("Backdrop: %s" % self.backdrop)
-        print("Logo: %s" % self.logo)
-        print(" ----   Meta -----")
-        print(self.meta)
-        print("----------------------------------")
