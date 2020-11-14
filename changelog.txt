@@ -1,3 +1,6 @@
+0.0.3
+- Added OE1 DD 5.1 Livestream
+
 0.0.2
 - Streaming Parameter fix causing Issue #1
 

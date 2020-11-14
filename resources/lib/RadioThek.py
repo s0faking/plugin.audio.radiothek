@@ -59,6 +59,9 @@ class RadioThek:
         'campus': 'Ö1 Campus',
         'tir': 'Radio Tirol'
     }
+    livestream_dd = {
+        'oe1': 'https://oe1dd.mdn.ors.at/out/u/oe1dd/manifest.m3u8'
+    }
 
     def __init__(self, local_resource_path, translation):
         self.log("RadioThek API loaded")
@@ -503,6 +506,17 @@ class RadioThek:
             item = self.api_reference['stations'][station]
             title = item['title']
             description = "%s Livestream" % title
+
+            if station in self.livestream_dd:
+                link = self.livestream_dd[station]
+                thumbnail = ""
+                backdrop = ""
+                logo = self.get_directory_image({'station': station}, 'logo')
+                if link:
+                    episode = Episode(station, "%s (5.1 DD)" % title, description, [link], 'Livestream', thumbnail, backdrop, station,
+                                      logo)
+                    print(link)
+                    list_items.append(episode)
 
             if 'livestream' in item:
                 link = item['livestream']
