@@ -4,6 +4,7 @@ import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
+import xbmcvfs
 import sys
 
 
@@ -166,7 +167,7 @@ def get_input():
 def searchHistoryPush(title):
     if not title:
         return
-    addonUserDataFolder = xbmc.translatePath("special://profile/addon_data/plugin.audio.radiothek")
+    addonUserDataFolder = xbmcvfs.translatePath("special://profile/addon_data/plugin.audio.radiothek")
     json_file = os.path.join(addonUserDataFolder, 'searchhistory.json')
     title = unquote_url(title)
     title = title.replace("+", " ").strip()
@@ -191,7 +192,7 @@ def searchHistoryPush(title):
 
 
 def searchHistoryGet():
-    addonUserDataFolder = xbmc.translatePath("special://profile/addon_data/plugin.audio.radiothek")
+    addonUserDataFolder = xbmcvfs.translatePath("special://profile/addon_data/plugin.audio.radiothek")
     json_file = os.path.join(addonUserDataFolder, 'searchhistory.json')
     if os.path.exists(json_file):
         if os.path.getsize(json_file) > 0:
