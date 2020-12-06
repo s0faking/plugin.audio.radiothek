@@ -515,7 +515,6 @@ class RadioThek:
                 if link:
                     episode = Episode(station, "%s (5.1 DD)" % title, description, [link], 'Livestream', thumbnail, backdrop, station,
                                       logo)
-                    print(link)
                     list_items.append(episode)
 
             if 'livestream' in item:
@@ -580,6 +579,6 @@ class RadioThek:
     @staticmethod
     def log(msg):
         try:
-            print(msg)
+            radiothek_log(msg, True)
         except Exception as e:
-            print(msg.encode('utf-8'))
+            radiothek_log(msg.encode('utf-8'))
