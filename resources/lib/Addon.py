@@ -4,6 +4,7 @@ import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
+import xbmcvfs
 import sys
 
 
@@ -166,7 +167,7 @@ def get_input():
 def searchHistoryPush(title):
     if not title:
         return
-    addonUserDataFolder = xbmc.translatePath("special://profile/addon_data/plugin.audio.radiothek")
+    addonUserDataFolder = xbmcvfs.translatePath("special://profile/addon_data/plugin.audio.radiothek")
     json_file = os.path.join(addonUserDataFolder, 'searchhistory.json')
     title = unquote_url(title)
     title = title.replace("+", " ").strip()
@@ -191,7 +192,7 @@ def searchHistoryPush(title):
 
 
 def searchHistoryGet():
-    addonUserDataFolder = xbmc.translatePath("special://profile/addon_data/plugin.audio.radiothek")
+    addonUserDataFolder = xbmcvfs.translatePath("special://profile/addon_data/plugin.audio.radiothek")
     json_file = os.path.join(addonUserDataFolder, 'searchhistory.json')
     if os.path.exists(json_file):
         if os.path.getsize(json_file) > 0:
@@ -235,6 +236,7 @@ def main(pluginhandle):
         list_items = api.get_podcasts()
         for list_item in list_items:
             add_directory_item(list_item,  "podcast_detail", pluginhandle)
+        xbmcplugin.addSortMethod(pluginhandle, xbmcplugin.SORT_METHOD_LABEL)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'highlights':
         list_items = api.get_highlights()
@@ -245,16 +247,19 @@ def main(pluginhandle):
         list_items = api.get_tags()
         for list_item in list_items:
             add_directory_item(list_item,  "tags_detail", pluginhandle)
+        xbmcplugin.addSortMethod(pluginhandle, xbmcplugin.SORT_METHOD_LABEL)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'archive':
         list_items = api.get_archive()
         for list_item in list_items:
             add_directory_item(list_item, "podcast_detail", pluginhandle)
+        xbmcplugin.addSortMethod(pluginhandle, xbmcplugin.SORT_METHOD_LABEL)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'live':
         episodes = api.get_livestream()
         for episode in episodes:
             add_stream(episode, pluginhandle)
+        xbmcplugin.addSortMethod(pluginhandle, xbmcplugin.SORT_METHOD_LABEL)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'search':
         add_directory(get_translation(30014, "Search ..."), "", "", "", "", "", "search_detail", pluginhandle)
