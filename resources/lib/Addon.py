@@ -236,6 +236,7 @@ def main(pluginhandle):
         list_items = api.get_podcasts()
         for list_item in list_items:
             add_directory_item(list_item,  "podcast_detail", pluginhandle)
+        xbmcplugin.addSortMethod(pluginhandle, xbmcplugin.SORT_METHOD_LABEL)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'highlights':
         list_items = api.get_highlights()
@@ -246,16 +247,19 @@ def main(pluginhandle):
         list_items = api.get_tags()
         for list_item in list_items:
             add_directory_item(list_item,  "tags_detail", pluginhandle)
+        xbmcplugin.addSortMethod(pluginhandle, xbmcplugin.SORT_METHOD_LABEL)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'archive':
         list_items = api.get_archive()
         for list_item in list_items:
             add_directory_item(list_item, "podcast_detail", pluginhandle)
+        xbmcplugin.addSortMethod(pluginhandle, xbmcplugin.SORT_METHOD_LABEL)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'live':
         episodes = api.get_livestream()
         for episode in episodes:
             add_stream(episode, pluginhandle)
+        xbmcplugin.addSortMethod(pluginhandle, xbmcplugin.SORT_METHOD_LABEL)
         xbmcplugin.endOfDirectory(pluginhandle)
     elif mode == 'search':
         add_directory(get_translation(30014, "Search ..."), "", "", "", "", "", "search_detail", pluginhandle)
