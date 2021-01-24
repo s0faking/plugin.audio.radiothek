@@ -1,3 +1,8 @@
+0.1.2
+- Shoutcast livestream pattern changed.
+- Added settings for livestream (Shoutcast/HLS)
+- Added quality settings for livestreams
+
 0.1.1
 - Added sort for podcast & archive views
 
