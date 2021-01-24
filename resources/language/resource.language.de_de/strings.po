@@ -105,3 +105,7 @@ msgstr "Adaptiv"
 msgctxt "#30122"
 msgid "Audio Quality"
 msgstr "Audio Qualität"
+
+msgctxt "#30123"
+msgid "General"
+msgstr "Allgemein"

@@ -339,6 +339,6 @@ def main(pluginhandle):
 settings = xbmcaddon.Addon()
 translation_ref = settings.getLocalizedString
 resource_path = get_media_path()
-protocol = getAudioQuality()
+protocol = getAudioProtocol()
 quality = getAudioQuality()
 api = RadioThek(resource_path, translation_ref, protocol, quality)
