@@ -224,12 +224,12 @@ def getAudioQuality():
     quality_list = ['q1a', 'q2a', 'q3a', 'q4a', 'qxb']
     audio_protocol = getAudioProtocol()
     if audio_protocol == 'shoutcast':
-        quality_index = xbmcaddon.Addon().getSetting('audioQuality')
+        quality_index = int(xbmcaddon.Addon().getSetting('audioQuality'))
     else:
-        quality_index = xbmcaddon.Addon().getSetting('audioQualityHLS')
+        quality_index = int(xbmcaddon.Addon().getSetting('audioQualityHLS'))
+
     try:
-        if quality_index in quality_list:
-            return quality_list[quality_index]
+        return quality_list[quality_index]
     except:
         return quality_list[0]
 

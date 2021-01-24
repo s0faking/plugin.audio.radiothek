@@ -96,6 +96,7 @@ class RadioThek:
                 # Default bad quality settings to adaptive.
                 self.stream_quality = 'qxa'
             self.livestream_recipe = self.livestream_qualities_hls_aac[self.stream_quality]
+        self.log("Using quality setting %s" % self.stream_quality)
 
     @staticmethod
     def build_stream_url(host_station, loop_stream_id, offset):
@@ -557,7 +558,7 @@ class RadioThek:
         return list_items
 
     def build_livestream_url(self, channel):
-        if self.stream_proto is 'hls':
+        if self.stream_proto == 'hls':
             self.log(self.livestream_recipe)
             return self.livestream_recipe % (channel, channel)
         else:

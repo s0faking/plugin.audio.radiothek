@@ -103,9 +103,9 @@ msgid "Adaptive"
 msgstr ""
 
 msgctxt "#30122"
-msgid "Audio Quality"
+msgid "Livestream Audio Quality"
 msgstr ""
 
 msgctxt "#30123"
-msgid "General"
+msgid "Livestream"
 msgstr ""
