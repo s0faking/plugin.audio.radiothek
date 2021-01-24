@@ -95,9 +95,13 @@ msgid "High"
 msgstr "Hoch"
 
 msgctxt "#30120"
+msgid "Very High"
+msgstr "Sehr hoch"
+
+msgctxt "#30121"
 msgid "Adaptive"
 msgstr "Adaptiv"
 
-msgctxt "#30121"
+msgctxt "#30122"
 msgid "Audio Quality"
 msgstr "Audio Qualität"

@@ -220,6 +220,26 @@ def getSearchHistory(pluginhandle):
             add_directory(search_query, "", "", "", "", search_query, "search_detail", pluginhandle)
 
 
+def getAudioQuality():
+    quality_list = ['q1a', 'q2a', 'q3a', 'q4a', 'qxb']
+    audio_protocol = getAudioProtocol()
+    if audio_protocol == 'shoutcast':
+        quality_index = xbmcaddon.Addon().getSetting('audioQuality')
+    else:
+        quality_index = xbmcaddon.Addon().getSetting('audioQualityHLS')
+    try:
+        if quality_index in quality_list:
+            return quality_list[quality_index]
+    except:
+        return quality_list[0]
+
+
+def getAudioProtocol():
+    if xbmcaddon.Addon().getSetting('useHlsLive') == 'true':
+        return 'hls'
+    return 'shoutcast'
+
+
 def main(pluginhandle):
     params = parameters_string_to_dict(sys.argv[2])
     mode = params.get('mode')
@@ -319,4 +339,6 @@ def main(pluginhandle):
 settings = xbmcaddon.Addon()
 translation_ref = settings.getLocalizedString
 resource_path = get_media_path()
-api = RadioThek(resource_path, translation_ref)
+protocol = getAudioQuality()
+quality = getAudioQuality()
+api = RadioThek(resource_path, translation_ref, protocol, quality)
