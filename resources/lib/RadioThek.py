@@ -559,10 +559,8 @@ class RadioThek:
 
     def build_livestream_url(self, channel):
         if self.stream_proto == 'hls':
-            self.log(self.livestream_recipe)
             return self.livestream_recipe % (channel, channel)
         else:
-            self.log(self.livestream_recipe)
             return self.livestream_recipe % channel
 
     def get_search(self, query):
