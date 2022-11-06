@@ -534,7 +534,7 @@ class RadioThek:
 
         for station in self.api_reference['stations']:
             item = self.api_reference['stations'][station]
-            title = item['title']
+            title = item['name']
             description = "%s Livestream" % title
 
             if station in self.livestream_dd:
@@ -547,8 +547,8 @@ class RadioThek:
                                       logo)
                     list_items.append(episode)
 
-            if 'livestream' in item:
-                link = self.build_livestream_url(station)
+            if 'liveStreamUrlTemplate' in item:
+                link = item['liveStreamUrlTemplate'].format(quality = self.stream_quality)
                 thumbnail = ""
                 backdrop = ""
                 logo = self.get_directory_image({'station': station}, 'logo')
